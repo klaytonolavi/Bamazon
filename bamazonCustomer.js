@@ -1,5 +1,6 @@
 var mysql = require('mysql');
 var inquirer = require('inquirer');
+require('console.table');
 
 // creating the connection to the mySQL database containing the bamazon_DB file.
 var connection = mysql.createConnection({
@@ -19,18 +20,18 @@ var connection = mysql.createConnection({
     if (err) throw err;
     console.log("connected as id " + connection.threadId);
     displayTable();
-    runPrompt();
-  });
+});
 
-  // function for displaying the table containing the inventory of all items. 
+// function for displaying the table containing the inventory of all items. 
 function displayTable() {
     connection.query("SELECT * FROM bamazonInv", function(err, res) {
         console.log("ID  " + "Product Name " + "Dept. Name " + "Price " + "Stock Quantity");
         console.log("---------------------------------------------------");
-            for (var i = 0; i < res.length; i++) {
-             console.log(res[i].id + " | " + res[i].product_name + " | " + res[i].department_name + " | " + res[i].price + " | " + res[i].stock_quantity);
-        }
+    
+            console.table(res);
+        
         console.log("-----------------------------------");
+        runPrompt();
       });
     }
 
@@ -44,7 +45,7 @@ function runPrompt() {
         // after asking for input, I need to be able to have the prompt appear underneath the table and run after the table is displayed
     }]).then(function(result){
         connection.query('SELECT * FROM `bamazonInv` WHERE `id` = ?', [result.option], (err, res) => {
-
+            console.log("You have selected option: " + result.option);
             // after getting the ID from the option, ask how many customer would like to buy
             inquirer.prompt([{
                 type: "input",
