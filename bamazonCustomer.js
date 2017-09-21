@@ -39,57 +39,45 @@ function displayTable() {
 function runPrompt() {
       inquirer.prompt([{
         type: "input",
-        message: "What is the ID of the item you would like to purchase?",
-        name: "option",
-
-        // after asking for input, I need to be able to have the prompt appear underneath the table and run after the table is displayed
-    }]).then(function(result){
-        connection.query("SELECT * FROM bamazonInv WHERE id = ?", [result.option], (err, res) => {
-            console.log("You have selected option: " + result.option);
-            // after getting the ID from the option, ask how many customer would like to buy
-            inquirer.prompt([{
-                type: "input",
-                message: "How many would you like to buy?",
-                name: "qty",
-
-            // function that checks to see if there are enough of that item in stock, checks the result of the qty prompt and makes sure its less than
-            // the total stock quantity in the database
-            }]).then(function(result) {
-                console.log(result);
-                console.log("Thank you for purchasing " + [result.qty] + "of ");
-                
-                
-                
-    //             if (result.qty < res[i].stock_quantity) {
-    //                 // update database to reflect new amount in stock
-    //                 // have to use some sort of math to subtract and update new quantity
-    //                 updateInv();
-    //                     function updateInv() {
-    //                         var currentInv = res[i].stock_quantity;
-    //                         var updatedInv = (res[i].stock_quantity - result.qty);
-    //                         var query = connection.query(
-    //                             "UPDATE bamazonInv SET ? WHERE ?",
-    //                             [
-    //                               {
-    //                                 stock_quantity: currentInv
-    //                               },
-    //                               {
-    //                                 stock_quantity: updatedInv
-    //                               }
-    //                             ],
-    //                             function(err, res) {
-    //                                 console.log("Stock Updated");
-    //                                 // Call  AFTER the UPDATE completes
-    //                               }
-    //                             );
-    //                     }
-    //             } 
-    //             else {
-    //                 console.log("We are sorry, there aren't enough of that item in our inventory.");
-    //             }
-            })
-        })
-    })
+        message: "What is the ID of the item you would like to purchase? (Press Q to quit)",
+        name: "itemId",
+      },
+      {
+          type: "input",
+          message: "How many would you like to purchase?",
+          name: "quantity"
+      
+    }]).then(function (transaction) {
+        purchase(transaction.item_id, transaction.quantity);
+    });
 }
+
+function purchase(itemId, quantity)
+{
+    connection.query('SELECT `stock_quantity`, `product_name`, `price` FROM `bamazonInv` WHERE `id` = ?',
+    [itemId], (error, item) =>
+    {
+        if (error) throw error;
+        if (item[0].stock_quantity >= quantity) {
+            checkout(itemId, item[0].stock_quantity-quantity, quantity, item[0].product_name, item[0].price);
+        } else {
+            console.log('ERROR: ' + 'Not enough items in stock!');
+            this.start();
+        }
+    });
+
+    function checkout(itemId, quantity, amount, name, price) {
+        connection.query('UPDATE `bamazonInv` SET ? WHERE ?',
+        [{stock_quantity: quantity},{id: itemId}],
+        (error, results, fields) =>
+        {
+            console.log('SUCCESS: ' + 'Your order of '+amount+' '+name+' for $'+price*amount+' has been placed.');
+        });
+        connection.end();
+    }
+}
+
+
+
     
 
