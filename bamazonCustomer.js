@@ -1,83 +1,83 @@
-var mysql = require('mysql');
-var inquirer = require('inquirer');
-require('console.table');
+// node modules and variable for selecting from mySQL easily
+require("console.table");
+var mysql = require("mysql");
+var inquirer = require("inquirer");
+var query = "SELECT * FROM bamazonInv WHERE ?";
 
-// creating the connection to the mySQL database containing the bamazon_DB file.
+// connection to mySQL 
 var connection = mysql.createConnection({
-    host: "localhost",
-    port: 3306,
-  
-    // Your username
-    user: "root",
-  
-    // Your password
-    password: "gRack4bry",
-    database: "bamazon_DB"
-  });
-
-  // checking for errors, then console logging confirmation that we are connected and running functions to display table and run prompt. 
-  connection.connect(function(err) {
-    if (err) throw err;
-    console.log("connected as id " + connection.threadId);
-    displayTable();
+  host: "localhost",
+  port: 3306,
+  user: "root",
+  password: "gRack4bry",
+  database: "bamazon_db"
 });
 
-// function for displaying the table containing the inventory of all items. 
-function displayTable() {
-    connection.query("SELECT * FROM bamazonInv", function(err, res) {
-        
-        console.log("---------------------------------------------------");
-    
-            console.table(res);
-        
-        console.log("-----------------------------------");
-        runPrompt();
-      });
-    }
-
-    // function which holds the inquirer prompt, asking which ID and quantity customer would like to purchase
-function runPrompt() {
-      inquirer.prompt([{
-        type: "input",
-        message: "What is the ID of the item you would like to purchase? (Press Q to quit)",
-        name: "itemId",
-      },
-      {
-          type: "input",
-          message: "How many would you like to purchase?",
-          name: "quantity"
-      
-    }]).then(function (transaction) {
-        purchase(transaction.item_id, transaction.quantity);
-    });
+// loads the table from mySQL and displays it in the console log for users to see
+function loadTable() {
+  connection.query("SELECT * FROM bamazonInv", function (err, res) {
+    if (err) throw err;
+    // using console.table module, display the bamazonInv table in a pretty way in the console.
+    console.table(res);
+    // runs the inquirer prompt for user input
+    inventorySearch();
+  });
 }
+loadTable();
 
-function purchase(itemId, quantity)
-{
-    connection.query('SELECT `stock_quantity`, `product_name`, `price` FROM `bamazonInv` WHERE `id` = ?',
-    [itemId], (error, item) =>
+function inventorySearch() {
+
+// asks for user input 
+  inquirer.prompt([
     {
-        if (error) throw error;
-        if (item[0].stock_quantity >= quantity) {
-            checkout(itemId, item[0].stock_quantity-quantity, quantity, item[0].product_name, item[0].price);
-        } else {
-            console.log('ERROR: ' + 'Not enough items in stock!');
-            this.start();
-        }
-    });
-
-    function checkout(itemId, quantity, amount, name, price) {
-        connection.query('UPDATE `bamazonInv` SET ? WHERE ?',
-        [{stock_quantity: quantity},{id: itemId}],
-        (error, results, fields) =>
-        {
-            console.log('SUCCESS: ' + 'Your order of '+amount+' '+name+' for $'+price*amount+' has been placed.');
-        });
-        connection.end();
+      name: "item_id",
+      type: "choices",
+      message: "What is the id of the product you would like to buy?"
+    },
+    {
+      name: "stock",
+      type: "input",
+      message: "Enter the quantity."
     }
-}
-
-
-
+  ]).then(function (answers) {
     
+// variable to store the users answers to prompt
+    let id = answers.item_id;
+    let qty = answers.stock;
+    updateStock();
+    
+// function that runs queries to mySQL to update the inventory, looks at current stock and checks that there is enough for the quantity chosen by the user
 
+    function updateStock() {
+      var query = "SELECT * FROM bamazonInv WHERE ?";
+      var queryUpdate = "UPDATE bamazonInv SET ? WHERE ?";
+      connection.query(query, {id: id }, function (err, res) {
+
+        // checking if the quantity chosen by the user is less than the quantity in the mySQL database.
+        var quantity = res[0].stock_quantity;
+        if (quantity >= answers.stock) {
+          quantity = quantity - answers.stock;
+
+        // console logging the remaining stock by taking the users input and subtracting it from database stock
+          console.log(`There is ${quantity} remaining.`);
+
+        // variable that stores the total price by taking the price of the item and multiplying it by the users input of quantity
+          var totalPrice =  res[0].price * answers.stock; 
+          console.log("Thanks for purchasing! Your total is..." + "$" + totalPrice);
+          console.log("----------------------------------");
+
+        // query to update the database of the new stock quantity after what was purchased, than displays the new table with the updated inventory
+          connection.query(queryUpdate,[{stock_quantity: quantity},{id: id}], function(err) {
+            if (err) throw err;
+            loadTable();
+          })
+          
+        // if there are not enough items in the stock then give the user a message of insufficient quantity!
+        } else {
+          console.log("Insufficient quantity!");
+          inventorySearch();
+        }
+      })
+    }
+  })
+}

@@ -9,7 +9,7 @@ CREATE TABLE bamazonInv (
 	id INTEGER(11) AUTO_INCREMENT NOT NULL,
 	product_name VARCHAR(100) NOT NULL,
     department_name VARCHAR(100) NOT NULL,
-    price INTEGER(30) NOT NULL,
+    price float(7,2) NOT NULL,
     stock_quantity INTEGER(30) NOT NULL,
     PRIMARY KEY (id)
 );
